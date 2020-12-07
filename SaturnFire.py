@@ -2,6 +2,7 @@ import serial
 import time
 import logging
 import serial.rs485
+from SaturnFireGUI import *
 
 START_OF_HEADER = bytes(0x01)
 START_OF_TEXT = bytes(0x02)
@@ -67,9 +68,10 @@ class FireWheel:
         # print(checksum)
 
 
+WheelFireGUI()
 
 
-startapp = FireWheel()
-startapp.send_command()
+#startapp = FireWheel()
+#startapp.send_command()
 
 
