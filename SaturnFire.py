@@ -3,8 +3,12 @@ import time
 import logging
 import serial.rs485
 import serial.tools.list_ports
+import threading
+import multiprocessing
+from Queue import Queue
 from tkinter import *
 from tkinter import messagebox
+from tkinter import Toplevel
 
 root = Tk()
 
@@ -25,16 +29,18 @@ portstatus = StringVar()
 portstatus.set("Closed")
 logfile = "HuxleyLogfile.log"
 
+
 logging.basicConfig(filename=logfile, filemode='w', level=logging.INFO)
 
 
 
 class FireWheel:
     def __init__(self, root):
+        # self.wheelrunning = False
         self.last_time = int(round(time.time() * 1000))
         self.last_fire_time = int(round(time.time() * 1000))
-        # self.ser = serial.rs485.RS485(port=serialport, baudrate=serialbaudrate, stopbits=serial.STOPBITS_ONE, parity = serial.PARITY_NONE, bytesize=serial.EIGHTBITS, timeout=1, rtscts=0)
-        # self.ser.rs485_mode = serial.rs485.RS485Settings(False, True)
+        self.Process = multiprocessing.Process(target=self.send_command)
+        self.thread_queue = Queue()
 
         print("Launching GUI")
         root.title("Serial Tests")
@@ -52,16 +58,24 @@ class FireWheel:
         self.closebutton.grid(row=3, column=1)
         self.opencclose = Label(root, textvariable=portstatus)
         self.opencclose.grid(row=0, column=2)
-        self.runwheel = Button(root, text="Start Wheel", command=lambda: self.send_command())
+        self.runwheel = Button(root, text="Start Wheel", command=lambda: self.Process.start())
         self.runwheel.grid(row=5, column=0)
-        self.stopwheel = Button(root, text="Stop Wheel", command=lambda: self.close_serial())
+        self.stopwheel = Button(root, text="Stop Wheel", command=lambda: self.stop_wheel())
         self.stopwheel.grid(row=5, column=1)
+        self.start_log()
+
         # TODO: Write the logs in to text box, assuming it's not going to block. Toplevel? Thread?
-        self.scrollbar = Scrollbar(root)
+
+
+    def start_log(self):
+        logwindow = Toplevel()
+        self.scrollbar = Scrollbar(logwindow)
         self.scrollbar.grid(row=0, column=5, sticky=(N, S, E))
-        self.text = Text(root, yscrollcommand=self.scrollbar.set)
+        self.text = Text(logwindow, yscrollcommand=self.scrollbar.set)
         self.text.grid(row=0, column=4, sticky=(N, S, E, W))
         self.scrollbar.config(command=self.text.yview)
+        self.text.insert(END, "ThisIsSOmething \n")
+
 
     def open_serial(self):
         print("Opening Serial Port")
@@ -70,6 +84,7 @@ class FireWheel:
             self.ser.rs485_mode = serial.rs485.RS485Settings(False, True)
             print("Serial Port Opened on port " + str(serialport.get()))
             portstatus.set("Opened")
+            self.text.insert(END, "Port Opened")
         except serial.SerialException as e:
             print("Something Went Wrong! \n" + str(e))
             self.message_box(e)
@@ -77,13 +92,31 @@ class FireWheel:
     def serial_ports():
         return serial.tools.list_ports.comports()
 
+    def read_serial_test(self, pollmessage):
+        self.text.insert(END, "POLL STARTUP")
+        self.text.insert(END, pollmessage)
+        qpolls = self.thread_queue.get()
+        self.text.insert(END,qpolls)
+        print(self.thread_queue.get())
+
+        # print(pollmessage)
+
+    def stop_wheel(self):
+        print(self.Process.is_alive())
+        self.Process.terminate()
+        print(self.Process.is_alive())
+        print("Wheel Process Stopped")
+        self.Process = multiprocessing.Process(target=self.send_command)
+
     def close_serial(self):
         print("Closing Serial Port")
+        # self.wheelrunning = False
         self.ser.close()
         portstatus.set("Closed")
         print("Serial Port Closed")
 
     def send_command(self): # TODO: Check that this does not block the gui. Threads?
+
         print(portstatus.get())
         if portstatus.get() == "Closed":
             self.message_box("PLEASE OPEN SERIAL PORT FIRST")
@@ -93,26 +126,34 @@ class FireWheel:
             print "Enter a timeout value over 20"
             self.message_box("Please enter a fire timeout above 20")
         else:
+            # self.wheelrunning = True
             while True:
                 sr1hexcommand = bytearray.fromhex("01 30 32 02 53 52 31 03 7e 04")
                 sr2hexcommand = bytearray.fromhex("01 30 32 02 53 52 32 03 7f 04")
                 sr3hexcommand = bytearray.fromhex("01 30 32 02 53 52 33 03 80 04")
-
                 print("FireTimeout = " + str(polltime))
                 print("LastTime = " + str(self.last_time))
                 try:
                     while True:
-                        # self.start_log()
-                        if int(round(time.time() * 1000)) > self.last_time + (polltime):
-                            self.ser.write(sr1hexcommand)
-                            self.readData()
-                            self.ser.write(sr2hexcommand)
-                            self.readData()
-                            self.last_time = int(round(time.time() * 1000))
-                            if int(round(time.time() * 1000)) > self.last_fire_time + (firetimeout.get()):
-                                print("Sending Fire Command")
-                            else:
-                                continue
+                        self.text.insert(INSERT, "A Message")
+                        self.text.insert(INSERT, "ThisIsSOmething \n")
+                        self.read_serial_test("POLL MESSAGE")
+                        self.thread_queue.put("ThisIsAQueueMessage")
+                        print(self.thread_queue.get())
+                        # if self.wheelrunning == False:
+                        #     break
+                        # else:
+                        #     pass
+                        # if int(round(time.time() * 1000)) > self.last_time + (polltime):
+                        #     self.ser.write(sr1hexcommand)
+                        #     self.readData()
+                        #     self.ser.write(sr2hexcommand)
+                        #     self.readData()
+                        #     self.last_time = int(round(time.time() * 1000))
+                        #     if int(round(time.time() * 1000)) > self.last_fire_time + (firetimeout.get()):
+                        #         print("Sending Fire Command")
+                        #     else:
+                        #         continue
                 except serial.SerialException as e:
                     print("Something bad happened" + str(e))
                     self.message_box(e)
@@ -146,6 +187,7 @@ class FireWheel:
 
     def message_box(self, openerror):
         messagebox.showerror("ERROR!", openerror)
+
 
 
 app = FireWheel(root)

@@ -1,11 +1,16 @@
 from tkinter import *
+# from SaturnFire import serialport
 
 
 class WheelFireGUI:
-    def __init__(self):
+    def __init__(self, root):
         print("Launching GUI")
-
+        selectport = serialport
         root.title("Serial Tests")
+        self.port = Entry(root, textvariable=selectport)
+        self.port.grid(row=0, column=0)
+        self.label = Label(root, text="ThisIsText")
+        self.label.grid(row=0, column=1)
 
 # baudlabel = Label(window, text="Baud Rate: ")
 # portlabel = Label(window, text="Port:: ")
@@ -27,8 +32,8 @@ class WheelFireGUI:
 
 
 
-
 root = Tk()
+app = WheelFireGUI(root)
 root.mainloop()
 
 
