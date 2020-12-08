@@ -10,6 +10,9 @@ from tkinter import *
 from tkinter import messagebox
 from tkinter import Toplevel
 
+
+# Author: Dean Hutt
+
 root = Tk()
 
 START_OF_HEADER = bytes(0x01)
@@ -61,19 +64,23 @@ class FireWheel:
         self.runwheel.grid(row=5, column=0)
         self.stopwheel = Button(root, text="Stop Wheel", command=lambda: self.stop_wheel())
         self.stopwheel.grid(row=5, column=1)
-        self.start_log()
+        self.scrollbar = Scrollbar(root)
+        self.scrollbar.grid(row=0, column=8, rowspan=18, sticky=(N, S, E))
+        self.text = Text(root, yscrollcommand=self.scrollbar.set)
+        self.text.grid(row=0, column=7, rowspan=18, sticky=(N, S, E, W))
+        self.scrollbar.config(command=self.text.yview)
+        self.closebutton = Button(root, text="Close", command= lambda: exit())
+        self.closebutton.grid(row=6, column=0, columnspan=2)
+        self.text.insert(END, "App Started. v0.1 \n")
+
 
         # TODO: Write the logs in to text box, assuming it's not going to block. Toplevel? Thread?
 
 
     def start_log(self):
         logwindow = Toplevel()
-        self.scrollbar = Scrollbar(logwindow)
-        self.scrollbar.grid(row=0, column=5, sticky=(N, S, E))
-        self.text = Text(logwindow, yscrollcommand=self.scrollbar.set)
-        self.text.grid(row=0, column=4, sticky=(N, S, E, W))
-        self.scrollbar.config(command=self.text.yview)
-        self.text.insert(END, "ThisIsSOmething \n")
+
+
 
 
     def open_serial(self):
