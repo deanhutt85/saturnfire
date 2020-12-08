@@ -30,13 +30,12 @@ portstatus.set("Closed")
 logfile = "HuxleyLogfile.log"
 
 
-logging.basicConfig(filename=logfile, filemode='w', level=logging.INFO)
+logging.basicConfig(filename=logfile, filemode='w', level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
 
 
 
 class FireWheel:
     def __init__(self, root):
-        # self.wheelrunning = False
         self.last_time = int(round(time.time() * 1000))
         self.last_fire_time = int(round(time.time() * 1000))
         self.Process = multiprocessing.Process(target=self.send_command)
@@ -93,11 +92,13 @@ class FireWheel:
         return serial.tools.list_ports.comports()
 
     def read_serial_test(self, pollmessage):
-        self.text.insert(END, "POLL STARTUP")
-        self.text.insert(END, pollmessage)
-        qpolls = self.thread_queue.get()
-        self.text.insert(END,qpolls)
-        print(self.thread_queue.get())
+        incoming = pollmessage
+        self.text.insert(END, incoming)
+        # qpolls = self.thread_queue.get()
+        # self.text.insert(END,qpolls)
+        # print(self.thread_queue.get())
+        self.text.insert(END,"Hello")
+        print("MESSAGE" + pollmessage)
 
         # print(pollmessage)
 
@@ -115,8 +116,8 @@ class FireWheel:
         portstatus.set("Closed")
         print("Serial Port Closed")
 
-    def send_command(self): # TODO: Check that this does not block the gui. Threads?
-
+    def send_command(self):
+        self.read_serial_test("STARTING WHEEL POLLING")
         print(portstatus.get())
         if portstatus.get() == "Closed":
             self.message_box("PLEASE OPEN SERIAL PORT FIRST")
@@ -126,34 +127,27 @@ class FireWheel:
             print "Enter a timeout value over 20"
             self.message_box("Please enter a fire timeout above 20")
         else:
-            # self.wheelrunning = True
             while True:
                 sr1hexcommand = bytearray.fromhex("01 30 32 02 53 52 31 03 7e 04")
                 sr2hexcommand = bytearray.fromhex("01 30 32 02 53 52 32 03 7f 04")
-                sr3hexcommand = bytearray.fromhex("01 30 32 02 53 52 33 03 80 04")
-                print("FireTimeout = " + str(polltime))
+                sr3hexcommand = bytearray.fromhex("01 30 34 02 53 52 33 03 82 04")
+                print("Poll Time = " + str(polltime))
+                print("Fire Timeout = " + str(firetimeout.get()))
                 print("LastTime = " + str(self.last_time))
                 try:
                     while True:
-                        self.text.insert(INSERT, "A Message")
-                        self.text.insert(INSERT, "ThisIsSOmething \n")
-                        self.read_serial_test("POLL MESSAGE")
-                        self.thread_queue.put("ThisIsAQueueMessage")
-                        print(self.thread_queue.get())
-                        # if self.wheelrunning == False:
-                        #     break
-                        # else:
-                        #     pass
-                        # if int(round(time.time() * 1000)) > self.last_time + (polltime):
-                        #     self.ser.write(sr1hexcommand)
-                        #     self.readData()
-                        #     self.ser.write(sr2hexcommand)
-                        #     self.readData()
-                        #     self.last_time = int(round(time.time() * 1000))
-                        #     if int(round(time.time() * 1000)) > self.last_fire_time + (firetimeout.get()):
-                        #         print("Sending Fire Command")
-                        #     else:
-                        #         continue
+
+                        if int(round(time.time() * 1000)) > self.last_time + (polltime):
+                            self.ser.write(sr1hexcommand)
+                            #self.readData()
+                            self.ser.write(sr2hexcommand)
+                            self.readData()
+                            self.last_time = int(round(time.time() * 1000))
+                            if int(round(time.time() * 1000)) > self.last_fire_time + (firetimeout.get() * 1000):
+                                print("Sending Fire Command")
+                                self.last_fire_time = int(round(time.time() * 1000))
+                            else:
+                                continue
                 except serial.SerialException as e:
                     print("Something bad happened" + str(e))
                     self.message_box(e)
@@ -161,8 +155,10 @@ class FireWheel:
 
     def send_fire(self):
         print("Firing")
-        # TODO: Fix hex command here
-        firehexcommand = bytearray.fromhex("01 30 32 02 53 52 31 03 7e 04")
+        self.read_serial_test("Sent Fire Command")
+        self.text.insert("Fire COmmend Sent")
+        # TODO: Validate hex command here
+        firehexcommand = bytearray.fromhex("01 30 34 02 52 43 30 03 7f 04")
         self.ser.write(firehexcommand)
         self.readData()
 
@@ -173,6 +169,7 @@ class FireWheel:
             if oneByte == b"\4":
                 print(buffer)
                 logging.info(buffer)
+                self.read_serial_test(buffer)
                 return buffer
             else:
                 buffer += oneByte.decode("ascii")
