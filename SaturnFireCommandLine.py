@@ -20,7 +20,7 @@ END_OF_TRANSMITION = bytes(0x04)
 #serialport = '/dev/ttyUSB0'
 serialport = str(sys.argv[1])
 serialbaudrate = 9600
-polltime = 200 # In ms
+polltime = 100 # In ms
 spincount = 1
 firetimeout = 60
 logfile = "HuxleyLogfile.log"
@@ -50,6 +50,10 @@ class FireWheel:
             print("EXITING!")
             quit()
 
+        print(self.ser.is_open)
+        self.ser.flush()
+        self.ser.flushInput()
+        self.ser.flushOutput()
 
     def serial_ports():
         return serial.tools.list_ports.comports()
@@ -88,6 +92,7 @@ class FireWheel:
                             if int(round(time.time() * 1000)) > self.last_fire_time + (firetimeout * 1000):
                                 print("Sending Fire Command")
                                 self.send_fire()
+                                self.send_fire()
                                 self.last_fire_time = int(round(time.time() * 1000))
                                 print(int(round(time.time() * 1000)) - self.last_fire_time)
                             else:
@@ -108,8 +113,9 @@ class FireWheel:
         buffer = ""
         while True:
             oneByte = self.ser.read(1)
+
             if oneByte == b"\4":
-                print(buffer)
+                print("READ " + buffer)
                 logging.info(buffer)
                 self.error_flag = buffer[48]
                 print(self.error_flag)
