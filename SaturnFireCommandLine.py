@@ -111,13 +111,13 @@ class FireWheel:
             if oneByte == b"\4":
                 print(buffer)
                 logging.info(buffer)
-                # self.error_flag = buffer[48]
-                # print(self.error_flag)
-                # if self.error_flag == "1":
-                #     print("Wheel Error!!!")
-                #     self.read_error()
-                # else:
-                return buffer
+                self.error_flag = buffer[48]
+                print(self.error_flag)
+                if self.error_flag == "1":
+                    print("Wheel Error!!!")
+                    self.read_error()
+                else:
+                    return buffer
             else:
                 buffer += oneByte.decode("ascii")
 
@@ -131,7 +131,7 @@ class FireWheel:
             oneByte = self.ser.read(1)
             if oneByte == b"\4":
                 print(errorbuffer)
-                logging.info(errorbuffer)
+                logging.warning(errorbuffer[5:12])
                 print("*** WHEEL ERROR ***\n" + errorbuffer[5:12])
                 # if self.Process.is_alive():
                 #     self.Process.terminate()
