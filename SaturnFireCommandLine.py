@@ -5,7 +5,7 @@ import serial.rs485
 import serial.tools.list_ports
 import multiprocessing
 from Queue import Queue
-
+import sys
 
 
 # Author: Dean Hutt
@@ -17,17 +17,22 @@ END_OF_TEXT = bytes(0x03)
 END_OF_TRANSMITION = bytes(0x04)
 
 
-serialport = '/dev/ttyUSB0'
+#serialport = '/dev/ttyUSB0'
+serialport = str(sys.argv[1])
 serialbaudrate = 9600
 polltime = 200 # In ms
 spincount = 1
-firetimeout = 20
+firetimeout = 60
 logfile = "HuxleyLogfile.log"
 
-logging.basicConfig(filename=logfile, filemode='w', level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
+#logging.basicConfig(filename=logfile, filemode='a', level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
+logging.basicConfig(filename=logfile, level=logging.INFO, filemode='a', format="%(asctime)s:%(levelname)s: %(message)s")
+logging.getLogger().addHandler(logging.StreamHandler())
 
 class FireWheel:
     def __init__(self):
+        print(32 * "*"  + "\nSTARTING SATURN FIRE APPLICATION\n" + 32 * "*")
+        print("FIRE TIMEOUT SET TO " + str(firetimeout))
         self.last_time = int(round(time.time() * 1000))
         self.last_fire_time = int(round(time.time() * 1000))
         self.Process = multiprocessing.Process(target=self.send_command)
@@ -78,7 +83,7 @@ class FireWheel:
                     while True:
                         if int(round(time.time() * 1000)) > self.last_time + polltime:
                             self.ser.write(sr2hexcommand)
-                            #self.readData()
+                            self.readData()
                             self.last_time = int(round(time.time() * 1000))
                             if int(round(time.time() * 1000)) > self.last_fire_time + (firetimeout * 1000):
                                 print("Sending Fire Command")
@@ -102,7 +107,6 @@ class FireWheel:
         #sr3hexcommand = bytearray.fromhex("01 30 34 02 53 52 33 03 82 04")
         buffer = ""
         while True:
-            print("READING IN BYTES")
             oneByte = self.ser.read(1)
             if oneByte == b"\4":
                 print(buffer)
@@ -154,4 +158,3 @@ class FireWheel:
 app = FireWheel()
 # root.mainloop()
 app.send_command()
-
